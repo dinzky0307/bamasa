@@ -128,13 +128,20 @@ class BookingController extends Controller
     }
 
     // Tourist: view my bookings
-    public function myBookings()
-    {
-        $bookings = Booking::with('business')
-            ->where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
-            ->get();
+    public function myBookings(Request $request)
+{
+    $user = auth()->user();
 
-        return view('bookings.mine', compact('bookings'));
-    }
+    $status = $request->query('status'); // optional filter
+
+    $bookings = $user->bookings() // assuming hasMany in User model
+        ->with('business')
+        ->when($status, function ($q) use ($status) {
+            $q->where('status', $status);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(10);
+
+    return view('bookings.mine', compact('bookings', 'status'));
+}
 }

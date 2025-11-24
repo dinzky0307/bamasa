@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Attraction extends Model
 {
@@ -12,19 +12,15 @@ class Attraction extends Model
     protected $fillable = [
         'name',
         'slug',
-        'type',
+        'category',
         'description',
         'municipality',
         'address',
         'latitude',
         'longitude',
+        'opening_hours',
+        'entrance_fee',
         'thumbnail',
-        'is_featured',
-    ];
-
-    protected $casts = [
-        'is_featured' => 'boolean',
-        'latitude'    => 'float',
-        'longitude'   => 'float',
+        'status',
     ];
 }

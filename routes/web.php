@@ -8,6 +8,8 @@ use App\Http\Controllers\OwnerDashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WizardController;
+use App\Http\Controllers\AttractionController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -42,6 +44,13 @@ Route::get('/businesses', [BusinessController::class, 'index'])
 
 Route::get('/businesses/{business}', [BusinessController::class, 'show'])
     ->name('businesses.show');
+
+                // Public Attractions
+            Route::get('/attractions', [AttractionController::class, 'index'])
+            ->name('attractions.index');
+
+            Route::get('/attractions/{attraction}', [AttractionController::class, 'show'])
+            ->name('attractions.show');
 
 
 /*
@@ -176,4 +185,13 @@ Route::middleware(['auth', 'admin'])
 
         Route::get('/ajax/users', [AdminController::class, 'ajaxUsers'])
             ->name('ajax.users');
+        
+            // Attractions management
+Route::get('/attractions', [AdminController::class, 'attractions'])->name('attractions');
+Route::get('/attractions/create', [AdminController::class, 'createAttraction'])->name('attractions.create');
+Route::post('/attractions', [AdminController::class, 'storeAttraction'])->name('attractions.store');
+Route::get('/attractions/{attraction}/edit', [AdminController::class, 'editAttraction'])->name('attractions.edit');
+Route::put('/attractions/{attraction}', [AdminController::class, 'updateAttraction'])->name('attractions.update');
+Route::delete('/attractions/{attraction}', [AdminController::class, 'deleteAttraction'])->name('attractions.delete');
+
     });

@@ -21,9 +21,9 @@
                 Businesses
             </a>
 
-            <a href="/attractions" class="text-gray-700 hover:text-black">
-                Attractions
-            </a>
+            <a href="{{ route('attractions.index') }}" class="hover:text-gray-900">
+    Attractions
+</a>
         </div>
 
         {{-- Right side: auth / owner links --}}

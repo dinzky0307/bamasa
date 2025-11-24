@@ -7,6 +7,9 @@ use App\Models\Booking;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use App\Models\Attraction;
+use Illuminate\Support\Str;
+
 
 class AdminController extends Controller
 {
@@ -162,5 +165,110 @@ public function ajaxBusinesses(Request $request)
     return view('admin.businesses.partials.table', compact('businesses'))->render();
 }
 
+// List attractions
+public function attractions()
+{
+    $attractions = Attraction::orderBy('created_at', 'desc')->paginate(15);
+
+    return view('admin.attractions.index', compact('attractions'));
+}
+
+// Show create form
+public function createAttraction()
+{
+    $municipalities = ['Bantayan', 'Santa Fe', 'Madridejos'];
+    $categories     = ['beach', 'church', 'landmark', 'park', 'food', 'activity'];
+
+    return view('admin.attractions.form', [
+        'attraction'     => new Attraction(),
+        'municipalities' => $municipalities,
+        'categories'     => $categories,
+        'mode'           => 'create',
+    ]);
+}
+
+// Store new attraction
+public function storeAttraction(Request $request)
+{
+    $validated = $request->validate([
+        'name'          => 'required|string|max:255',
+        'category'      => 'nullable|string|max:50',
+        'description'   => 'nullable|string',
+        'municipality'  => 'nullable|string|max:100',
+        'address'       => 'nullable|string|max:255',
+        'latitude'      => 'nullable|numeric',
+        'longitude'     => 'nullable|numeric',
+        'opening_hours' => 'nullable|string|max:255',
+        'entrance_fee'  => 'nullable|string|max:100',
+        'status'        => 'required|in:published,draft',
+        'thumbnail'     => 'nullable|image|max:2048',
+    ]);
+
+    $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+
+    if ($request->hasFile('thumbnail')) {
+        $validated['thumbnail'] = $request->file('thumbnail')->store('attractions', 'public');
+    }
+
+    Attraction::create($validated);
+
+    return redirect()->route('admin.attractions')
+        ->with('success', 'Attraction created successfully.');
+}
+
+// Show edit form
+public function editAttraction(Attraction $attraction)
+{
+    $municipalities = ['Bantayan', 'Santa Fe', 'Madridejos'];
+    $categories     = ['beach', 'church', 'landmark', 'park', 'food', 'activity'];
+
+    return view('admin.attractions.form', [
+        'attraction'     => $attraction,
+        'municipalities' => $municipalities,
+        'categories'     => $categories,
+        'mode'           => 'edit',
+    ]);
+}
+
+// Update
+public function updateAttraction(Request $request, Attraction $attraction)
+{
+    $validated = $request->validate([
+        'name'          => 'required|string|max:255',
+        'category'      => 'nullable|string|max:50',
+        'description'   => 'nullable|string',
+        'municipality'  => 'nullable|string|max:100',
+        'address'       => 'nullable|string|max:255',
+        'latitude'      => 'nullable|numeric',
+        'longitude'     => 'nullable|numeric',
+        'opening_hours' => 'nullable|string|max:255',
+        'entrance_fee'  => 'nullable|string|max:100',
+        'status'        => 'required|in:published,draft',
+        'thumbnail'     => 'nullable|image|max:2048',
+    ]);
+
+    if ($request->hasFile('thumbnail')) {
+        $validated['thumbnail'] = $request->file('thumbnail')->store('attractions', 'public');
+    }
+
+    // Regenerate slug if name changed
+    if ($attraction->name !== $validated['name']) {
+        $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+    }
+
+    $attraction->update($validated);
+
+    return redirect()->route('admin.attractions')
+        ->with('success', 'Attraction updated successfully.');
+}
+
+// Delete
+public function deleteAttraction(Attraction $attraction)
+{
+    $attraction->delete();
+
+    return redirect()->route('admin.attractions')
+        ->with('success', 'Attraction deleted.');
+}
 
 }

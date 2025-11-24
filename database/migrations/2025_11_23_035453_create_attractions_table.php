@@ -12,14 +12,16 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('slug')->unique();
-            $table->string('type')->nullable(); // beach, church, cave, etc.
+            $table->string('category')->nullable();      // beach, church, landmark, etc.
             $table->text('description')->nullable();
-            $table->string('municipality')->nullable(); // Bantayan, Santa Fe, Madridejos
+            $table->string('municipality')->nullable();  // Bantayan, Santa Fe, Madridejos
             $table->string('address')->nullable();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
-            $table->string('thumbnail')->nullable(); // path to image
-            $table->boolean('is_featured')->default(false);
+            $table->string('opening_hours')->nullable(); // "8AM–5PM"
+            $table->string('entrance_fee')->nullable();  // "₱50", "Free"
+            $table->string('thumbnail')->nullable();     // image path
+            $table->string('status')->default('published'); // published / draft
             $table->timestamps();
         });
     }
@@ -29,3 +31,4 @@ return new class extends Migration
         Schema::dropIfExists('attractions');
     }
 };
+

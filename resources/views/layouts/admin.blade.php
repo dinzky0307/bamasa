@@ -33,6 +33,12 @@
                     Manage Businesses
                 </a>
 
+                <a href="{{ route('admin.attractions') }}"
+   class="block px-6 py-3 hover:bg-sky-50 {{ request()->routeIs('admin.attractions*') ? 'bg-sky-100 font-semibold text-sky-700' : 'text-gray-700' }}">
+    Manage Attractions
+</a>
+
+
                 <a href="{{ route('admin.bookings') }}"
                    class="block px-6 py-3 hover:bg-sky-50 {{ request()->routeIs('admin.bookings') ? 'bg-sky-100 font-semibold text-sky-700' : 'text-gray-700' }}">
                     All Bookings

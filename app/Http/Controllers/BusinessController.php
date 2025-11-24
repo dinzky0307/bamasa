@@ -7,13 +7,38 @@ use Illuminate\Http\Request;
 
 class BusinessController extends Controller
 {
+
+    public function show(Business $business)
+{
+    // Only show approved businesses to the public.
+    // If you want admins/owners to see their own even if pending, you can relax this.
+    if ($business->status !== 'approved') {
+        // Optionally allow admin or the owner to see it:
+        if (!auth()->check() || auth()->user()->role !== 'admin') {
+            abort(404);
+        }
+    }
+
+    return view('businesses.show', compact('business'));
+}
+
+
     // Display all approved businesses
     public function index(Request $request)
 {
-    $query = Business::where('status', 'approved');
+    $query = Business::query()
+        ->where('status', 'approved'); // only show approved businesses
 
-    // Keyword search
-    if ($search = $request->input('q')) {
+    // Read filters from query string
+    $search       = $request->query('q');
+    $municipality = $request->query('municipality');
+    $category     = $request->query('category');
+    $minPrice     = $request->query('min_price');
+    $maxPrice     = $request->query('max_price');
+    $sort         = $request->query('sort');
+
+    // Text search (name + description)
+    if ($search) {
         $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
               ->orWhere('description', 'like', "%{$search}%");
@@ -21,28 +46,59 @@ class BusinessController extends Controller
     }
 
     // Municipality filter
-    if ($municipality = $request->input('municipality')) {
+    if ($municipality) {
         $query->where('municipality', $municipality);
     }
 
-    // We’re not actually filtering by dates yet (that’s more complex),
-    // but we accept them so they can be used later if you want.
-
-    $businesses = $query->orderBy('name')
-                        ->paginate(12)
-                        ->withQueryString();
-
-    return view('businesses.index', compact('businesses'));
-}
-
-    // Business detail page
-    public function show(Business $business)
-    {
-        // Redirect if not approved (public should not see pending)
-        if ($business->status !== 'approved') {
-            abort(404);
-        }
-
-        return view('businesses.show', compact('business'));
+    // Category filter
+    if ($category) {
+        $query->where('category', $category);
     }
+
+    // Price range
+    if ($minPrice !== null && $minPrice !== '') {
+        $query->where('min_price', '>=', $minPrice);
+    }
+
+    if ($maxPrice !== null && $maxPrice !== '') {
+        $query->where('max_price', '<=', $maxPrice);
+    }
+
+    // Sorting
+    switch ($sort) {
+        case 'price_asc':
+            $query->orderBy('min_price', 'asc');
+            break;
+        case 'price_desc':
+            $query->orderBy('min_price', 'desc');
+            break;
+        case 'name_asc':
+            $query->orderBy('name', 'asc');
+            break;
+        case 'latest':
+        default:
+            $query->orderBy('created_at', 'desc');
+            break;
+    }
+
+    $businesses = $query->paginate(9)->withQueryString();
+
+    // For dropdowns
+    $municipalities = ['Bantayan', 'Santa Fe', 'Madridejos'];
+    $categories     = ['hotel', 'resort', 'homestay', 'restaurant', 'tour_operator'];
+
+    return view('businesses.index', compact(
+        'businesses',
+        'municipalities',
+        'categories',
+        'search',
+        'municipality',
+        'category',
+        'minPrice',
+        'maxPrice',
+        'sort'
+    ));
+
+    
+}
 }
