@@ -10,18 +10,27 @@ class Business extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'name',
-        'category',
-        'description',
-        'address',
-        'municipality',
-        'phone',
-        'email',
-        'website',
-        'facebook_page',
-        'status',
-        'min_price',
-        'max_price',
-    ];
+    'user_id',
+    'name',
+    'category',
+    'description',
+    'address',
+    'municipality',
+    'phone',
+    'email',
+    'website',
+    'facebook_page',
+    'min_price',
+    'max_price',
+    'status',
+    'thumbnail',        // 👈 add this
+    'wizard_completed', // 👈 add this if not there
+];
+
+
+    // 🔥 This is the missing relationship
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

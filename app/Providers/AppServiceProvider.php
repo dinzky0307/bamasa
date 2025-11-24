@@ -1,7 +1,8 @@
 <?php
 
 namespace App\Providers;
-
+use App\Models\Business;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -17,8 +18,17 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        //
-    }
+
+
+public function boot(): void
+{
+    View::composer('*', function ($view) {
+        if (auth()->check() && auth()->user()->role === 'admin') {
+            $pendingBusinessCount = Business::where('status', 'pending')->count();
+            $view->with('pendingBusinessCount', $pendingBusinessCount);
+        }
+    });
+}
+
+    
 }

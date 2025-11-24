@@ -28,7 +28,7 @@ return new class extends Migration
             $table->string('website')->nullable();
             $table->string('facebook_page')->nullable();
 
-            $table->string('status')->default('pending'); // pending, approved, rejected
+             $table->string('status')->default('pending')->change(); // pending, approved, rejected
 
             $table->decimal('min_price', 10, 2)->nullable();
             $table->decimal('max_price', 10, 2)->nullable();
@@ -45,6 +45,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('businesses');
+         Schema::table('businesses', function (Blueprint $table) {
+        $table->string('status')->default('approved')->change();
+    });
     }
 };
