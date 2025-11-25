@@ -78,6 +78,12 @@
                     Analytics Dashboard
                 </a>
 
+                <a href="{{ route('admin.announcements.index') }}" 
+                class="block px-6 py-3 hover:bg-sky-50 {{ request()->routeIs('admin.announcements') ? 'bg-sky-100 font-semibold text-sky-700' : 'text-gray-700' }}">
+    Island Info
+</a>
+
+
                 <form action="{{ route('logout') }}" method="POST" class="mt-6">
                     @csrf
                     <button class="w-full text-left px-6 py-3 text-red-600 hover:bg-red-50">

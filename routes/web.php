@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WizardController;
 use App\Http\Controllers\AttractionController;
 use App\Http\Controllers\BusinessImageController;
+use App\Http\Controllers\AnnouncementController;
 
 
 
@@ -202,4 +203,55 @@ Route::get('/attractions/{attraction}/edit', [AdminController::class, 'editAttra
 Route::put('/attractions/{attraction}', [AdminController::class, 'updateAttraction'])->name('attractions.update');
 Route::delete('/attractions/{attraction}', [AdminController::class, 'deleteAttraction'])->name('attractions.delete');
 
+
+// LGU: manage announcements / island info
+Route::get('/announcements', [AnnouncementController::class, 'adminIndex'])
+    ->name('announcements.index');
+
+Route::get('/announcements/create', [AnnouncementController::class, 'create'])
+    ->name('announcements.create');
+
+Route::post('/announcements', [AnnouncementController::class, 'store'])
+    ->name('announcements.store');
+
+Route::get('/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])
+    ->name('announcements.edit');
+
+Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])
+    ->name('announcements.update');
+
+Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])
+    ->name('announcements.destroy');
+
+
+    // Announcements / Island info
+        Route::get('/announcements', [AnnouncementController::class, 'adminIndex'])
+            ->name('announcements.index');
+        Route::get('/announcements/create', [AnnouncementController::class, 'create'])
+            ->name('announcements.create');
+        Route::post('/announcements', [AnnouncementController::class, 'store'])
+            ->name('announcements.store');
+        Route::get('/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])
+            ->name('announcements.edit');
+        Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])
+            ->name('announcements.update');
+        Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])
+            ->name('announcements.destroy');
+    
     });
+
+    // Public: Island info / announcements
+Route::get('/announcements', [AnnouncementController::class, 'index'])
+    ->name('announcements.index');
+
+Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])
+    ->name('announcements.show');
+
+
+// Public: Island info / announcements
+Route::get('/announcements', [AnnouncementController::class, 'index'])
+    ->name('announcements.index');
+
+Route::get('/announcements/{announcement}', [AnnouncementController::class, 'show'])
+    ->name('announcements.show');
+

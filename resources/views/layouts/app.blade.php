@@ -74,6 +74,12 @@
                         </a>
                     @endif
                 @endauth
+
+               <a href="{{ route('announcements.index') }}"
+   class="text-gray-700 hover:text-black">
+    Island Info
+</a>
+
             </nav>
 
             {{-- Auth buttons --}}
