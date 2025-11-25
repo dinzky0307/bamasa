@@ -1,67 +1,58 @@
 @extends('layouts.admin')
 
 @section('content')
-<div class="max-w-6xl mx-auto">
+<div class="max-w-6xl mx-auto px-4 py-8">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">
+                Manage Attractions
+            </h1>
+            <p class="text-xs text-slate-500 mt-1">
+                View and manage registered tourist attractions in Bantayan Island.
+            </p>
+        </div>
 
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">Manage Attractions</h1>
-
-        <a href="{{ route('admin.attractions.create') }}"
-           class="px-4 py-2 bg-sky-600 text-white rounded text-sm hover:bg-sky-700">
-            + Add Attraction
-        </a>
+        <form method="GET" class="flex items-center gap-2">
+            <input type="text"
+                   name="q"
+                   value="{{ request('q') }}"
+                   class="border rounded-lg px-3 py-1.5 text-sm"
+                   placeholder="Search attractions...">
+            <button class="px-3 py-1.5 text-sm rounded-lg bg-sky-600 text-white hover:bg-sky-700">
+                Search
+            </button>
+        </form>
     </div>
 
-    @if(session('success'))
-        <div class="mb-4 bg-green-100 text-green-800 p-3 rounded text-sm">
-            {{ session('success') }}
-        </div>
-    @endif
-
     @if($attractions->isEmpty())
-        <p class="text-gray-500">No attractions found.</p>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 text-sm text-slate-600">
+            No attractions found.
+        </div>
     @else
-        <div class="bg-white shadow rounded overflow-hidden">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <table class="min-w-full text-sm">
-                <thead class="bg-gray-100">
-                    <tr>
-                        <th class="px-4 py-2 text-left">Name</th>
-                        <th class="px-4 py-2 text-left">Municipality</th>
-                        <th class="px-4 py-2 text-left">Category</th>
-                        <th class="px-4 py-2 text-left">Status</th>
-                        <th class="px-4 py-2 text-left">Created</th>
-                        <th class="px-4 py-2 text-right">Actions</th>
+                <thead class="bg-slate-50 border-b border-slate-100">
+                    <tr class="text-left text-xs font-semibold text-slate-500 uppercase">
+                        <th class="px-4 py-2">Name</th>
+                        <th class="px-4 py-2">Municipality</th>
+                        <th class="px-4 py-2">Category</th>
+                        <th class="px-4 py-2">Created</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y">
-                    @foreach($attractions as $att)
-                        <tr>
-                            <td class="px-4 py-2">{{ $att->name }}</td>
-                            <td class="px-4 py-2">{{ $att->municipality ?? '-' }}</td>
-                            <td class="px-4 py-2">{{ $att->category ?? '-' }}</td>
+                <tbody class="divide-y divide-slate-100">
+                    @foreach($attractions as $attr)
+                        <tr class="hover:bg-slate-50">
                             <td class="px-4 py-2">
-                                <span class="text-xs px-2 py-1 rounded
-                                    @if($att->status === 'published') bg-green-100 text-green-800
-                                    @else bg-gray-100 text-gray-700
-                                    @endif">
-                                    {{ ucfirst($att->status) }}
-                                </span>
+                                {{ $attr->name }}
                             </td>
-                            <td class="px-4 py-2">{{ $att->created_at->format('M d, Y') }}</td>
-                            <td class="px-4 py-2 text-right">
-                                <a href="{{ route('admin.attractions.edit', $att->id) }}"
-                                   class="text-xs px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-                                    Edit
-                                </a>
-                                <form action="{{ route('admin.attractions.delete', $att->id) }}"
-                                      method="POST" class="inline-block"
-                                      onsubmit="return confirm('Delete this attraction?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="text-xs px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">
-                                        Delete
-                                    </button>
-                                </form>
+                            <td class="px-4 py-2">
+                                {{ $attr->municipality ?? '-' }}
+                            </td>
+                            <td class="px-4 py-2">
+                                {{ $attr->category ?? '-' }}
+                            </td>
+                            <td class="px-4 py-2 text-xs text-slate-500">
+                                {{ $attr->created_at?->format('M d, Y') }}
                             </td>
                         </tr>
                     @endforeach
@@ -73,6 +64,5 @@
             {{ $attractions->links() }}
         </div>
     @endif
-
 </div>
 @endsection

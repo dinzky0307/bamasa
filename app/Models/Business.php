@@ -33,4 +33,15 @@ class Business extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function images()
+{
+    return $this->hasMany(BusinessImage::class)->orderBy('sort_order');
+}
+
+public function bookings()
+{
+    return $this->hasMany(\App\Models\Booking::class);
+}
+
 }

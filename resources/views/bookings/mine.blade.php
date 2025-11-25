@@ -1,108 +1,99 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-5xl mx-auto py-8 px-4">
+<div class="max-w-6xl mx-auto px-4 py-8">
 
+    {{-- Header --}}
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
         <div>
-            <h1 class="text-2xl font-bold">My Bookings</h1>
-            <p class="text-gray-600 text-sm">
-                View and track your reservations in Bantayan Island.
+            <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+                My trips
+            </p>
+            <h1 class="text-2xl md:text-3xl font-bold leading-tight">
+                My bookings
+            </h1>
+            <p class="text-sm text-slate-600 mt-1">
+                View all your past and upcoming reservations in Bantayan Island.
             </p>
         </div>
 
-        <div class="flex items-center gap-2">
-            <a href="{{ route('businesses.index') }}"
-               class="px-4 py-2 text-sm bg-sky-600 text-white rounded hover:bg-sky-700">
-                Find a place to stay
-            </a>
-        </div>
-    </div>
-
-    {{-- Filters --}}
-    <div class="mb-4 flex flex-wrap gap-2 text-sm">
-        @php
-            $statuses = [null => 'All', 'pending' => 'Pending', 'approved' => 'Approved', 'declined' => 'Declined'];
-        @endphp
-
-        @foreach($statuses as $value => $label)
-            <a href="{{ route('bookings.mine', $value ? ['status' => $value] : []) }}"
-               class="px-3 py-1 rounded border
-                    {{ ($status ?? null) === $value ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-700 hover:bg-gray-50' }}">
-                {{ $label }}
-            </a>
-        @endforeach
+        <a href="{{ route('businesses.index') }}"
+           class="text-xs px-3 py-2 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-50 inline-flex items-center gap-1">
+            <span>Browse more places</span> <span>↗</span>
+        </a>
     </div>
 
     @if($bookings->isEmpty())
-        <div class="bg-white shadow rounded p-6 text-center text-gray-500">
-            You don’t have any bookings yet.
-            <a href="{{ route('businesses.index') }}" class="text-sky-600 underline">
-                Browse businesses
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center">
+            <p class="text-sm text-slate-700 mb-2">
+                You don’t have any bookings yet.
+            </p>
+            <p class="text-xs text-slate-500 mb-4">
+                Start exploring places to stay and local restaurants around Bantayan Island.
+            </p>
+            <a href="{{ route('businesses.index') }}"
+               class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-sky-600 text-white text-sm font-medium hover:bg-sky-700">
+                📍 Find a place to stay
             </a>
         </div>
     @else
-        <div class="bg-white shadow rounded divide-y">
-            @foreach($bookings as $booking)
-                <div class="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        @php
+            $today = \Carbon\Carbon::today();
+            $upcoming = $bookings->filter(function($b) use ($today) {
+                return $b->check_in && $b->check_in->isFuture();
+            });
+            $past = $bookings->filter(function($b) use ($today) {
+                return $b->check_out && $b->check_out->lt($today);
+            });
+            $current = $bookings->filter(function($b) use ($today) {
+                return $b->check_in && $b->check_out &&
+                       $b->check_in->lte($today) && $b->check_out->gte($today);
+            });
+        @endphp
 
-                    {{-- Left: Business + dates --}}
-                    <div>
-                        <p class="font-semibold text-gray-900">
-                            {{ $booking->business->name ?? 'Business deleted' }}
-                        </p>
-                        <p class="text-sm text-gray-600">
-                            @if($booking->business)
-                                {{ $booking->business->municipality ?? '' }}
-                                ·
-                            @endif
-                            @if($booking->check_in && $booking->check_out)
-                                {{ \Carbon\Carbon::parse($booking->check_in)->format('M d, Y') }}
-                                →
-                                {{ \Carbon\Carbon::parse($booking->check_out)->format('M d, Y') }}
-                            @else
-                                <span class="text-red-600 font-medium">Dates not set</span>
-                            @endif
-                        </p>
-                        <p class="text-xs text-gray-500 mt-1">
-                            Booked on {{ $booking->created_at->format('M d, Y') }}
-                            · {{ $booking->guests ?? 1 }} guest{{ ($booking->guests ?? 1) > 1 ? 's' : '' }}
-                        </p>
+        {{-- Tabs (just visual sections, no JS needed) --}}
+        <div class="space-y-6">
+
+            {{-- Current / upcoming first --}}
+            @if($current->isNotEmpty())
+                <section>
+                    <h2 class="text-sm font-semibold text-slate-800 mb-2">
+                        Ongoing stay
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($current as $booking)
+                            @include('bookings.partials.booking-card', ['booking' => $booking])
+                        @endforeach
                     </div>
+                </section>
+            @endif
 
-                    {{-- Right: Status + actions --}}
-                    <div class="flex flex-col items-start md:items-end gap-2">
-
-                        {{-- Status badge --}}
-                        <span class="text-xs font-semibold px-2 py-1 rounded-full
-                            @if($booking->status === 'pending') bg-yellow-100 text-yellow-800
-                            @elseif($booking->status === 'approved') bg-green-100 text-green-800
-                            @elseif($booking->status === 'declined') bg-red-100 text-red-800
-                            @else bg-gray-100 text-gray-700
-                            @endif">
-                            {{ ucfirst($booking->status ?? 'pending') }}
-                        </span>
-
-                        {{-- (Optional) Show simple “instructions” based on status --}}
-                        <p class="text-xs text-gray-500">
-                            @if($booking->status === 'pending')
-                                Awaiting confirmation from the business.
-                            @elseif($booking->status === 'approved')
-                                Your booking is confirmed. Please keep your email/phone available.
-                            @elseif($booking->status === 'declined')
-                                This booking was declined. You may book another place.
-                            @endif
-                        </p>
-
-                        {{-- Future: cancel / contact buttons could go here --}}
+            @if($upcoming->isNotEmpty())
+                <section>
+                    <h2 class="text-sm font-semibold text-slate-800 mb-2">
+                        Upcoming bookings
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($upcoming as $booking)
+                            @include('bookings.partials.booking-card', ['booking' => $booking])
+                        @endforeach
                     </div>
-                </div>
-            @endforeach
-        </div>
+                </section>
+            @endif
 
-        {{-- Pagination --}}
-        <div class="mt-4">
-            {{ $bookings->withQueryString()->links() }}
+            {{-- Past --}}
+            @if($past->isNotEmpty())
+                <section>
+                    <h2 class="text-sm font-semibold text-slate-800 mb-2">
+                        Past trips
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        @foreach($past as $booking)
+                            @include('bookings.partials.booking-card', ['booking' => $booking, 'isPast' => true])
+                        @endforeach
+                    </div>
+                </section>
+            @endif
         </div>
     @endif
 </div>

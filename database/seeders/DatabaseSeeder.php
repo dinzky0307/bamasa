@@ -9,6 +9,7 @@ use App\Models\Attraction;
 use App\Models\Booking;
 use App\Models\Review;
 use App\Models\Page;
+use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,10 +18,56 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Admin user
-        User::factory()->admin()->create([
-            'name' => 'System Admin',
-        ]);
+        // System Admin (main)
+User::updateOrCreate(
+    ['email' => 'admin@bantayan.test'],
+    [
+        'name'     => 'System Admin',
+        'password' => Hash::make('admin123'),
+        'role'     => 'admin',
+        
+    ]
+);
+
+// LGU Bantayan Admin
+User::updateOrCreate(
+    ['email' => 'bantayan@gmail.com'],
+    [
+        'name'         => 'LGU Bantayan Admin',
+        'password'     => Hash::make('admin123'),
+        'role'         => 'admin',
+        'municipality' => 'Bantayan',
+        'lgu_logo'     => 'logos/bantayan.png',
+    ]
+);
+
+// LGU Madridejos Admin
+User::updateOrCreate(
+    ['email' => 'madridejos@gmail.com'],
+    [
+        'name'         => 'LGU Madridejos Admin',
+        'password'     => Hash::make('admin123'),
+        'role'         => 'admin',
+        'municipality' => 'Madridejos',
+        'lgu_logo'     => 'logos/madridejos.png',
+    ]
+);
+
+// LGU Santa Fe Admin
+User::updateOrCreate(
+    ['email' => 'santafe@gmail.com'],
+    [
+        'name'         => 'LGU Santa Fe Admin',
+        'password'     => Hash::make('admin123'),
+        'role'         => 'admin',
+        'municipality' => 'Santa Fe',
+        'lgu_logo'     => 'logos/santafe.png', // optional placeholder
+    ]
+);
+
+        
+      
+
 
         // Some tourists
         $tourists = User::factory(10)->create([
@@ -51,16 +98,21 @@ class DatabaseSeeder extends Seeder
         }
 
         // Static pages (About, How to Get There)
-        Page::create([
-            'slug'    => 'about-bantayan-island',
-            'title'   => 'About Bantayan Island',
-            'content' => '<p>Bantayan Island is a paradise located in the northern part of Cebu...</p>',
-        ]);
+Page::updateOrCreate(
+    ['slug' => 'about-bantayan-island'], // lookup by unique slug
+    [
+        'title'   => 'About Bantayan Island',
+        'content' => '<p>Bantayan Island is a paradise located in the northern part of Cebu...</p>',
+    ]
+);
 
-        Page::create([
-            'slug'    => 'how-to-get-there',
-            'title'   => 'How to Get There',
-            'content' => '<p>From Cebu City, take a bus to Hagnaya Port, then a ferry to Bantayan Island...</p>',
-        ]);
+Page::updateOrCreate(
+    ['slug' => 'how-to-get-there'],
+    [
+        'title'   => 'How to Get There',
+        'content' => '<p>From Cebu City, take a bus to Hagnaya Port, then a ferry to Bantayan Island...</p>',
+    ]
+);
+
     }
 }

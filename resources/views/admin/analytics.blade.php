@@ -33,6 +33,91 @@
             <canvas id="statusChart"></canvas>
         </div>
 
+        {{-- LOCAL VS INTERNATIONAL TOURISTS --}}
+<h2 class="text-xl font-bold mb-4">Tourist Statistics</h2>
+
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+
+    {{-- DAILY --}}
+    <div class="p-6 bg-white shadow rounded-lg border border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-600 uppercase">
+            Daily Visitors
+        </h3>
+        <p class="text-3xl font-bold mt-2 text-sky-700">
+            {{ $dailyStats['local'] + $dailyStats['foreign'] }}
+        </p>
+
+        <div class="mt-3 text-sm space-y-1">
+            <p class="text-green-600">
+                • Local: <strong>{{ $dailyStats['local'] }}</strong>
+            </p>
+            <p class="text-indigo-600">
+                • International: <strong>{{ $dailyStats['foreign'] }}</strong>
+            </p>
+        </div>
+    </div>
+
+    {{-- WEEKLY --}}
+    <div class="p-6 bg-white shadow rounded-lg border border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-600 uppercase">
+            Weekly Visitors
+        </h3>
+        <p class="text-3xl font-bold mt-2 text-sky-700">
+            {{ $weeklyStats['local'] + $weeklyStats['foreign'] }}
+        </p>
+
+        <div class="mt-3 text-sm space-y-1">
+            <p class="text-green-600">
+                • Local: <strong>{{ $weeklyStats['local'] }}</strong>
+            </p>
+            <p class="text-indigo-600">
+                • International: <strong>{{ $weeklyStats['foreign'] }}</strong>
+            </p>
+        </div>
+    </div>
+
+    {{-- MONTHLY --}}
+    <div class="p-6 bg-white shadow rounded-lg border border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-600 uppercase">
+            Monthly Visitors
+        </h3>
+        <p class="text-3xl font-bold mt-2 text-sky-700">
+            {{ $monthlyStats['local'] + $monthlyStats['foreign'] }}
+        </p>
+
+        <div class="mt-3 text-sm space-y-1">
+            <p class="text-green-600">
+                • Local: <strong>{{ $monthlyStats['local'] }}</strong>
+            </p>
+            <p class="text-indigo-600">
+                • International: <strong>{{ $monthlyStats['foreign'] }}</strong>
+            </p>
+        </div>
+    </div>
+
+    {{-- YEARLY --}}
+    <div class="p-6 bg-white shadow rounded-lg border border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-600 uppercase">
+            Yearly Visitors
+        </h3>
+        <p class="text-3xl font-bold mt-2 text-sky-700">
+            {{ $yearlyStats['local'] + $yearlyStats['foreign'] }}
+        </p>
+
+        <div class="mt-3 text-sm space-y-1">
+            <p class="text-green-600">
+                • Local: <strong>{{ $yearlyStats['local'] }}</strong>
+            </p>
+            <p class="text-indigo-600">
+                • International: <strong>{{ $yearlyStats['foreign'] }}</strong>
+            </p>
+        </div>
+    </div>
+
+</div>
+
+
+
     </div>
 </div>
 

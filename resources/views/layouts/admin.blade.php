@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bantayan Tourism Portal – Admin</title>
+    <title>Bantayan Island Tourism Portal – Admin</title>
 
     {{-- Tailwind (CDN ok for now) --}}
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,8 +18,32 @@
         <aside class="w-64 bg-white shadow-lg h-screen fixed top-0 left-0 z-30">
 
             <div class="p-6 border-b">
-                <h1 class="text-xl font-bold text-sky-700">Admin Panel</h1>
-                <p class="text-xs text-gray-500">Bantayan Tourism Portal</p>
+                <h1 class="text-xl font-bold text-sky-700"><div class="flex items-center gap-3">
+    {{-- LGU logo / initials --}}
+    @if(auth()->user()->lgu_logo)
+        <img src="{{ asset('storage/'.auth()->user()->lgu_logo) }}"
+             alt="{{ auth()->user()->municipality }} logo"
+             class="w-8 h-8 rounded-full object-cover">
+    @else
+        <div class="w-8 h-8 rounded-full bg-sky-600 text-white flex items-center justify-center text-xs">
+            {{ strtoupper(substr(auth()->user()->municipality ?? 'LGU', 0, 2)) }}
+        </div>
+    @endif
+
+    {{-- LGU name --}}
+    <div class="flex flex-col">
+        <span class="text-xs text-gray-500">Tourism Admin Panel</span>
+        <span class="font-semibold">
+            @if(auth()->user()->municipality)
+                LGU {{ auth()->user()->municipality }}
+            @else
+                LGU Admin
+            @endif
+        </span>
+    </div>
+</div>
+</h1>
+                <p class="text-xs text-gray-500">Bantayan Island Tourism Portal</p>
             </div>
 
             <nav class="mt-4 space-y-1">

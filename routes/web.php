@@ -9,6 +9,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\WizardController;
 use App\Http\Controllers\AttractionController;
+use App\Http\Controllers\BusinessImageController;
+
 
 
 /*
@@ -98,6 +100,12 @@ Route::middleware('auth')->group(function () {
             // Owner Analytics
             Route::get('/analytics', [OwnerDashboardController::class, 'analytics'])
                 ->name('analytics');
+
+                // Business Gallery
+Route::get('/business/images', [BusinessImageController::class, 'index'])->name('business.images');
+Route::post('/business/images', [BusinessImageController::class, 'store'])->name('business.images.store');
+Route::delete('/business/images/{image}', [BusinessImageController::class, 'destroy'])->name('business.images.destroy');
+
 
             /*
             |--------------------------------------------------------------------------

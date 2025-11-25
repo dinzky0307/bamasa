@@ -51,11 +51,12 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role'     => $data['role'],
-        ]);
+    'name'     => $request->name,
+    'email'    => $request->email,
+    'password' => bcrypt($request->password),
+    'role'     => 'tourist',
+    'country'  => $request->input('country', 'Philippines'),
+]);
 
         Auth::login($user);
 

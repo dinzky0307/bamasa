@@ -8,267 +8,470 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\Attraction;
-use Illuminate\Support\Str;
-
 
 class AdminController extends Controller
 {
+    /**
+     * Admin home dashboard.
+     */
     public function dashboard()
-{
-    return view('admin.dashboard', [
-        'totalUsers'        => User::count(),
-        'totalBusinesses'   => Business::count(),
-        'pendingBusinesses' => Business::where('status', 'pending')->count(),
-        'totalBookings'     => Booking::count(),
-        'recentBookings'    => Booking::latest()->take(5)->get(),
-    ]);
-}
-
-
-    public function businesses()
     {
-        $businesses = Business::with('user')
-            ->orderByRaw("FIELD(status, 'pending', 'approved', 'rejected')") // pending first
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+        // Business stats
+        $totalBusinesses      = Business::count();
+        $approvedBusinesses   = Business::where('status', 'approved')->count();
+        $pendingBusinesses    = Business::where('status', 'pending')->count();
+        $rejectedBusinesses   = Business::where('status', 'rejected')->count();
 
-        return view('admin.businesses.index', compact('businesses'));
+        // Booking stats
+        $totalBookings        = Booking::count();
+        $pendingBookings      = Booking::where('status', 'pending')->count();
+        $approvedBookings     = Booking::where('status', 'approved')->count();
+        $declinedBookings     = Booking::where('status', 'declined')->count();
+
+        // User stats
+        $totalUsers           = User::count();
+        $touristsCount        = User::where('role', 'tourist')->count();
+        $businessOwnersCount  = User::where('role', 'business')->count();
+        $adminCount           = User::where('role', 'admin')->count();
+
+        // Recent activity
+        $recentBookings = Booking::with(['user', 'business'])
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+
+        $pendingBusinessList = Business::with('user')
+            ->where('status', 'pending')
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+
+        return view('admin.dashboard', compact(
+            'totalBusinesses',
+            'approvedBusinesses',
+            'pendingBusinesses',
+            'rejectedBusinesses',
+            'totalBookings',
+            'pendingBookings',
+            'approvedBookings',
+            'declinedBookings',
+            'totalUsers',
+            'touristsCount',
+            'businessOwnersCount',
+            'adminCount',
+            'recentBookings',
+            'pendingBusinessList'
+        ));
     }
 
-    public function approveBusiness(Business $business)
+    /**
+     * Manage businesses list.
+     */
+    public function businesses(Request $request)
+    {
+        $status = $request->query('status');
+        $search = $request->query('q');
+
+        $query = Business::with('user');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('municipality', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        // Pending → approved → rejected
+        $query->orderByRaw("FIELD(status, 'pending', 'approved', 'rejected')")
+              ->orderBy('created_at', 'desc');
+
+        $businesses = $query->paginate(15)->withQueryString();
+
+        return view('admin.businesses.index', compact('businesses', 'status', 'search'));
+    }
+
+    /**
+     * Approve a business listing.
+     */
+    public function approveBusiness(Request $request, Business $business)
     {
         $business->status = 'approved';
         $business->save();
 
-        return redirect()
-            ->back()
-            ->with('success', "Business '{$business->name}' has been approved.");
+        return back()->with('success', 'Business has been approved.');
     }
 
-    public function rejectBusiness(Business $business, Request $request)
+    /**
+     * Reject a business listing.
+     */
+    public function rejectBusiness(Request $request, Business $business)
     {
         $business->status = 'rejected';
         $business->save();
 
-        return redirect()
-            ->back()
-            ->with('success', "Business '{$business->name}' has been rejected.");
+        return back()->with('success', 'Business has been rejected.');
     }
 
+    /**
+     * Admin bookings overview.
+     */
     public function bookings(Request $request)
-{
-    $status = $request->query('status', 'all');
-    $sort = $request->query('sort', 'newest');
-    $search = $request->query('q');
-
-    $query = Booking::with(['business', 'user']);
-
-    // Filter by status
-    if ($status !== 'all') {
-        $query->where('status', $status);
-    }
-
-    // Keyword search
-    if (!empty($search)) {
-        $query->where(function ($q) use ($search) {
-            $q->whereHas('user', function ($uq) use ($search) {
-                $uq->where('name', 'like', "%{$search}%");
-            })->orWhereHas('business', function ($bq) use ($search) {
-                $bq->where('name', 'like', "%{$search}%");
-            });
-        });
-    }
-
-    // Sorting
-    switch ($sort) {
-        case 'oldest':
-            $query->orderBy('created_at', 'asc');
-            break;
-        case 'checkin_asc':
-            $query->orderBy('check_in', 'asc');
-            break;
-        case 'checkin_desc':
-            $query->orderBy('check_in', 'desc');
-            break;
-        case 'name_asc':
-            $query->join('users', 'bookings.user_id', '=', 'users.id')
-                  ->orderBy('users.name', 'asc');
-            break;
-        case 'name_desc':
-            $query->join('users', 'bookings.user_id', '=', 'users.id')
-                  ->orderBy('users.name', 'desc');
-            break;
-        default: // newest
-            $query->orderBy('bookings.created_at', 'desc');
-    }
-
-    $bookings = $query->paginate(20)->withQueryString();
-
-    return view('admin.bookings.index', compact('bookings', 'status', 'sort', 'search'));
-}
-
-
-    public function users()
     {
-        $users = User::orderBy('created_at', 'desc')->paginate(20);
+        $status = $request->query('status');
+        $sort   = $request->query('sort', 'latest'); // latest | oldest
+        $search = $request->query('q');
 
-        return view('admin.users.index', compact('users'));
+        $query = Booking::with(['user', 'business']);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->whereHas('business', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('municipality', 'like', "%{$search}%");
+            })->orWhereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $bookings = $query->paginate(20)->withQueryString();
+
+        // Status counts for filters
+        $statusCounts = [
+            'pending'   => Booking::where('status', 'pending')->count(),
+            'approved'  => Booking::where('status', 'approved')->count(),
+            'declined'  => Booking::where('status', 'declined')->count(),
+            'cancelled' => Booking::where('status', 'cancelled')->count(),
+        ];
+
+        return view('admin.bookings.index', compact(
+            'bookings',
+            'status',
+            'sort',
+            'search',
+            'statusCounts'
+        ));
     }
 
+    /**
+     * Admin users overview.
+     */
+    public function users(Request $request)
+    {
+        $role   = $request->query('role');
+        $search = $request->query('q');
+
+        $query = User::query();
+
+        if ($role) {
+            $query->where('role', $role);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $users = $query->orderBy('name')->paginate(20)->withQueryString();
+
+        return view('admin.users.index', compact('users', 'role', 'search'));
+    }
+
+        /**
+     * Admin: manage attractions.
+     */
+    public function attractions(Request $request)
+    {
+        $status = $request->query('status'); // if you later add a status field
+        $search = $request->query('q');
+
+        $query = Attraction::query();
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('municipality', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // If you added a 'status' column to attractions (e.g. published/draft), you can filter:
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        $attractions = $query
+            ->orderBy('name')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('admin.attractions.index', compact('attractions', 'status', 'search'));
+    }
+
+    /**
+     * AJAX: businesses table data.
+     */
+    public function ajaxBusinesses(Request $request)
+    {
+        $status  = $request->query('status');
+        $search  = $request->query('q');
+        $perPage = (int) $request->query('per_page', 10);
+
+        $query = Business::with('user');
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('municipality', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+
+        $query->orderByRaw("FIELD(status, 'pending', 'approved', 'rejected')")
+              ->orderBy('created_at', 'desc');
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * AJAX: bookings table data.
+     */
+    public function ajaxBookings(Request $request)
+    {
+        $status  = $request->query('status');
+        $search  = $request->query('q');
+        $sort    = $request->query('sort', 'latest');
+        $perPage = (int) $request->query('per_page', 10);
+
+        $query = Booking::with(['user', 'business']);
+
+        if ($status) {
+            $query->where('status', $status);
+        }
+
+        if ($search) {
+            $query->whereHas('business', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('municipality', 'like', "%{$search}%");
+            })->orWhereHas('user', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($sort === 'oldest') {
+            $query->orderBy('created_at', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * AJAX: users table data.
+     */
+    public function ajaxUsers(Request $request)
+    {
+        $role    = $request->query('role');
+        $search  = $request->query('q');
+        $perPage = (int) $request->query('per_page', 10);
+
+        $query = User::query();
+
+        if ($role) {
+            $query->where('role', $role);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $query->orderBy('name');
+
+        $paginator = $query->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page'    => $paginator->lastPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * Admin analytics dashboard.
+     * Includes local vs international tourists and all chart data.
+     */
     public function analytics()
-{
-    // 1. Bookings per month (last 12 months)
-    $bookingsPerMonth = Booking::selectRaw('COUNT(*) as count, MONTH(created_at) as month')
-        ->where('created_at', '>=', now()->subYear())
-        ->groupBy('month')
-        ->orderBy('month')
-        ->pluck('count', 'month');
+    {
+        $today        = Carbon::today();
+        $startOfWeek  = $today->copy()->startOfWeek();
+        $startOfMonth = $today->copy()->startOfMonth();
+        $startOfYear  = $today->copy()->startOfYear();
 
-    // 2. Businesses per municipality
-    $businessesByMunicipality = Business::selectRaw('COUNT(*) as count, municipality')
-        ->groupBy('municipality')
-        ->pluck('count', 'municipality');
+        // Helper to get local vs foreign tourists within a time range
+        $countByPeriod = function (Carbon $startDate, Carbon $endDate) {
+            $bookings = Booking::with('user')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
 
-    // 3. User distribution by role
-    $usersByRole = User::selectRaw('COUNT(*) as count, role')
-        ->groupBy('role')
-        ->pluck('count', 'role');
+            $local = $bookings->filter(function ($booking) {
+                $country = optional($booking->user)->country ?? 'Philippines';
+                return strcasecmp($country, 'Philippines') === 0;
+            })->count();
 
-    // 4. Bookings by status
-    $bookingsByStatus = Booking::selectRaw('COUNT(*) as count, status')
-        ->groupBy('status')
-        ->pluck('count', 'status');
+            $foreign = $bookings->filter(function ($booking) {
+                $country = optional($booking->user)->country ?? 'Philippines';
+                return strcasecmp($country, 'Philippines') !== 0;
+            })->count();
 
-    return view('admin.analytics', compact(
-        'bookingsPerMonth',
-        'businessesByMunicipality',
-        'usersByRole',
-        'bookingsByStatus'
-    ));
-}
+            return [
+                'local'   => $local,
+                'foreign' => $foreign,
+            ];
+        };
 
-public function ajaxBusinesses(Request $request)
-{
-    $search = $request->search;
-    $sortBy = $request->sortBy ?? 'created_at';
-    $direction = $request->direction ?? 'desc';
+        // Local vs international tourists by period
+        $dailyStats = $countByPeriod(
+            $today->copy()->startOfDay(),
+            $today->copy()->endOfDay()
+        );
 
-    $businesses = Business::with('user')
-        ->when($search, fn($q) =>
-            $q->where('name', 'like', "%$search%")
-              ->orWhere('municipality', 'like', "%$search%")
-              ->orWhere('status', 'like', "%$search%")
-        )
-        ->orderBy($sortBy, $direction)
-        ->paginate(10);
+        $weeklyStats = $countByPeriod(
+            $startOfWeek,
+            $today->copy()->endOfDay()
+        );
 
-    return view('admin.businesses.partials.table', compact('businesses'))->render();
-}
+        $monthlyStats = $countByPeriod(
+            $startOfMonth,
+            $today->copy()->endOfDay()
+        );
 
-// List attractions
-public function attractions()
-{
-    $attractions = Attraction::orderBy('created_at', 'desc')->paginate(15);
+        $yearlyStats = $countByPeriod(
+            $startOfYear,
+            $today->copy()->endOfDay()
+        );
 
-    return view('admin.attractions.index', compact('attractions'));
-}
+        // Basic aggregate numbers
+        $totalBookings   = Booking::count();
+        $totalBusinesses = Business::count();
+        $totalUsers      = User::count();
 
-// Show create form
-public function createAttraction()
-{
-    $municipalities = ['Bantayan', 'Santa Fe', 'Madridejos'];
-    $categories     = ['beach', 'church', 'landmark', 'park', 'food', 'activity'];
+        // BOOKINGS PER DAY (last 7 days)
+        $bookingsPerDay = Booking::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->where('created_at', '>=', $today->copy()->subDays(6)->startOfDay())
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                return [
+                    Carbon::parse($row->date)->format('M d') => $row->count,
+                ];
+            });
 
-    return view('admin.attractions.form', [
-        'attraction'     => new Attraction(),
-        'municipalities' => $municipalities,
-        'categories'     => $categories,
-        'mode'           => 'create',
-    ]);
-}
+        // BOOKINGS PER MONTH (last 12 months)
+        $startOf12MonthsAgo = $today->copy()->subMonths(11)->startOfMonth();
 
-// Store new attraction
-public function storeAttraction(Request $request)
-{
-    $validated = $request->validate([
-        'name'          => 'required|string|max:255',
-        'category'      => 'nullable|string|max:50',
-        'description'   => 'nullable|string',
-        'municipality'  => 'nullable|string|max:100',
-        'address'       => 'nullable|string|max:255',
-        'latitude'      => 'nullable|numeric',
-        'longitude'     => 'nullable|numeric',
-        'opening_hours' => 'nullable|string|max:255',
-        'entrance_fee'  => 'nullable|string|max:100',
-        'status'        => 'required|in:published,draft',
-        'thumbnail'     => 'nullable|image|max:2048',
-    ]);
+        $bookingsPerMonth = Booking::selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as count")
+            ->where('created_at', '>=', $startOf12MonthsAgo)
+            ->groupBy('ym')
+            ->orderBy('ym')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $label = Carbon::createFromFormat('Y-m', $row->ym)->format('M Y');
+                return [$label => $row->count];
+            });
 
-    $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
+        // BUSINESSES PER MUNICIPALITY
+        $businessesByMunicipality = Business::selectRaw('municipality, COUNT(*) as count')
+            ->groupBy('municipality')
+            ->orderBy('municipality')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $label = $row->municipality ?: 'Unspecified';
+                return [$label => $row->count];
+            });
 
-    if ($request->hasFile('thumbnail')) {
-        $validated['thumbnail'] = $request->file('thumbnail')->store('attractions', 'public');
+        // USERS PER ROLE
+        $usersByRole = User::selectRaw('role, COUNT(*) as count')
+            ->groupBy('role')
+            ->orderBy('role')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $label = ucfirst($row->role ?? 'Unknown');
+                return [$label => $row->count];
+            });
+
+        // BOOKINGS BY STATUS
+        $bookingsByStatus = Booking::selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->orderBy('status')
+            ->get()
+            ->mapWithKeys(function ($row) {
+                $label = ucfirst($row->status ?? 'Unknown');
+                return [$label => $row->count];
+            });
+
+        return view('admin.analytics', compact(
+            'dailyStats',
+            'weeklyStats',
+            'monthlyStats',
+            'yearlyStats',
+            'totalBookings',
+            'totalBusinesses',
+            'totalUsers',
+            'bookingsPerDay',
+            'bookingsPerMonth',
+            'businessesByMunicipality',
+            'usersByRole',
+            'bookingsByStatus'
+        ));
     }
-
-    Attraction::create($validated);
-
-    return redirect()->route('admin.attractions')
-        ->with('success', 'Attraction created successfully.');
-}
-
-// Show edit form
-public function editAttraction(Attraction $attraction)
-{
-    $municipalities = ['Bantayan', 'Santa Fe', 'Madridejos'];
-    $categories     = ['beach', 'church', 'landmark', 'park', 'food', 'activity'];
-
-    return view('admin.attractions.form', [
-        'attraction'     => $attraction,
-        'municipalities' => $municipalities,
-        'categories'     => $categories,
-        'mode'           => 'edit',
-    ]);
-}
-
-// Update
-public function updateAttraction(Request $request, Attraction $attraction)
-{
-    $validated = $request->validate([
-        'name'          => 'required|string|max:255',
-        'category'      => 'nullable|string|max:50',
-        'description'   => 'nullable|string',
-        'municipality'  => 'nullable|string|max:100',
-        'address'       => 'nullable|string|max:255',
-        'latitude'      => 'nullable|numeric',
-        'longitude'     => 'nullable|numeric',
-        'opening_hours' => 'nullable|string|max:255',
-        'entrance_fee'  => 'nullable|string|max:100',
-        'status'        => 'required|in:published,draft',
-        'thumbnail'     => 'nullable|image|max:2048',
-    ]);
-
-    if ($request->hasFile('thumbnail')) {
-        $validated['thumbnail'] = $request->file('thumbnail')->store('attractions', 'public');
-    }
-
-    // Regenerate slug if name changed
-    if ($attraction->name !== $validated['name']) {
-        $validated['slug'] = Str::slug($validated['name']) . '-' . uniqid();
-    }
-
-    $attraction->update($validated);
-
-    return redirect()->route('admin.attractions')
-        ->with('success', 'Attraction updated successfully.');
-}
-
-// Delete
-public function deleteAttraction(Attraction $attraction)
-{
-    $attraction->delete();
-
-    return redirect()->route('admin.attractions')
-        ->with('success', 'Attraction deleted.');
-}
-
 }

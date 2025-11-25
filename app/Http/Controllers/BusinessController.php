@@ -4,23 +4,73 @@ namespace App\Http\Controllers;
 
 use App\Models\Business;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class BusinessController extends Controller
 {
 
-    public function show(Business $business)
+   public function show(Request $request, Business $business)
 {
-    // Only show approved businesses to the public.
-    // If you want admins/owners to see their own even if pending, you can relax this.
+    // Only show approved businesses publicly
     if ($business->status !== 'approved') {
-        // Optionally allow admin or the owner to see it:
         if (!auth()->check() || auth()->user()->role !== 'admin') {
             abort(404);
         }
     }
 
-    return view('businesses.show', compact('business'));
+    // Load relations
+    $business->load('images', 'bookings');
+
+    // Read ?month=YYYY-MM from query
+    $monthParam = $request->query('month');
+
+    if ($monthParam && preg_match('/^\d{4}-\d{2}$/', $monthParam)) {
+        [$year, $month] = explode('-', $monthParam);
+        $currentMonth = Carbon::createFromDate((int)$year, (int)$month, 1);
+    } else {
+        $currentMonth = Carbon::today()->startOfMonth();
+    }
+
+    $start = $currentMonth->copy()->startOfMonth();
+    $end   = $currentMonth->copy()->endOfMonth();
+
+    // Get bookings that overlap this month
+    $bookings = $business->bookings()
+        ->whereDate('check_in', '<=', $end)
+        ->whereDate('check_out', '>=', $start)
+        ->get();
+
+    $unavailableDates = [];
+
+    foreach ($bookings as $booking) {
+        if (!$booking->check_in || !$booking->check_out) {
+            continue;
+        }
+
+        $periodStart = Carbon::parse($booking->check_in)->max($start);
+        $periodEnd   = Carbon::parse($booking->check_out)->min($end);
+
+        for ($date = $periodStart->copy(); $date->lte($periodEnd); $date->addDay()) {
+            $unavailableDates[] = $date->toDateString(); // 'YYYY-MM-DD'
+        }
+    }
+
+    $unavailableDates = array_values(array_unique($unavailableDates));
+
+    // For navigation
+    $prevMonth = $currentMonth->copy()->subMonth();
+    $nextMonth = $currentMonth->copy()->addMonth();
+
+    return view('businesses.show', compact(
+        'business',
+        'unavailableDates',
+        'currentMonth',
+        'prevMonth',
+        'nextMonth'
+    ));
 }
+
+
 
 
     // Display all approved businesses
