@@ -33,6 +33,166 @@
             <canvas id="statusChart"></canvas>
         </div>
 
+        {{-- KEY DESTINATIONS & ACCOMMODATION PREFERENCES --}}
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+    {{-- Most visited attraction --}}
+    <div class="bg-white shadow rounded-xl border border-slate-100 p-5">
+        <h2 class="text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+            Mostly visited tourist attraction
+        </h2>
+
+        @if($mostVisitedAttraction)
+            <p class="text-lg font-bold text-slate-900">
+                {{ $mostVisitedAttraction->name }}
+            </p>
+            <p class="text-xs text-slate-500 mt-1">
+                {{ $mostVisitedAttraction->municipality ?? 'Bantayan Island' }}
+            </p>
+            <p class="text-sm text-slate-600 mt-3">
+                Estimated visits recorded: 
+                <span class="font-semibold">{{ number_format($mostVisitedAttraction->visits) }}</span>
+            </p>
+        @else
+            <p class="text-sm text-slate-500">
+                No attraction data available yet.
+            </p>
+        @endif
+    </div>
+
+    {{-- Most preferred accommodation --}}
+    <div class="bg-white shadow rounded-xl border border-slate-100 p-5">
+        <h2 class="text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+            Most preferred accommodation
+        </h2>
+
+        @if($topAccommodationByBookings && $topAccommodationByBookings->business)
+            <p class="text-lg font-bold text-slate-900">
+                {{ $topAccommodationByBookings->business->name }}
+            </p>
+            <p class="text-xs text-slate-500 mt-1">
+                {{ $topAccommodationByBookings->business->municipality ?? 'Bantayan Island' }}
+            </p>
+            <p class="text-sm text-slate-600 mt-3">
+                Total bookings recorded: 
+                <span class="font-semibold">{{ $topAccommodationByBookings->total_bookings }}</span>
+            </p>
+        @else
+            <p class="text-sm text-slate-500">
+                No booking data available yet.
+            </p>
+        @endif
+    </div>
+</div>
+
+{{-- LENGTH OF STAY --}}
+<div class="mt-8 bg-white shadow rounded-xl border border-slate-100 p-5">
+    <h2 class="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wide">
+        Length of stay (tourist bookings)
+    </h2>
+
+    @if($stayStats['longest'])
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Longest stay</p>
+                <p class="text-2xl font-bold text-slate-900">
+                    {{ $stayStats['longest'] }} <span class="text-sm font-normal">nights</span>
+                </p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Shortest stay</p>
+                <p class="text-2xl font-bold text-slate-900">
+                    {{ $stayStats['shortest'] }} <span class="text-sm font-normal">night(s)</span>
+                </p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Average stay</p>
+                <p class="text-2xl font-bold text-slate-900">
+                    {{ $stayStats['average'] }} <span class="text-sm font-normal">nights</span>
+                </p>
+            </div>
+        </div>
+    @else
+        <p class="text-sm text-slate-500">
+            No bookings with valid check-in/check-out dates yet.
+        </p>
+    @endif
+</div>
+
+{{-- LEVEL OF SATISFACTION (REVIEWS / RATINGS) --}}
+<div class="mt-8 bg-white shadow rounded-xl border border-slate-100 p-5">
+    <h2 class="text-sm font-semibold text-slate-700 mb-4 uppercase tracking-wide">
+        Level of satisfaction (accommodation ratings)
+    </h2>
+
+    @if($satisfactionStats['total_reviews'] > 0)
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm mb-4">
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Overall average rating</p>
+                <p class="text-2xl font-bold text-amber-500">
+                    {{ number_format($satisfactionStats['overall_average'], 2) }}
+                    <span class="text-sm text-slate-500">/ 5</span>
+                </p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Total reviews</p>
+                <p class="text-2xl font-bold text-slate-900">
+                    {{ $satisfactionStats['total_reviews'] }}
+                </p>
+            </div>
+            <div>
+                <p class="text-xs text-slate-500 uppercase">Interpretation</p>
+                @php
+                    $avg = $satisfactionStats['overall_average'];
+                    $label = 'No data';
+                    if ($avg >= 4.5) $label = 'Excellent';
+                    elseif ($avg >= 4) $label = 'Very Satisfied';
+                    elseif ($avg >= 3) $label = 'Satisfied';
+                    elseif ($avg >= 2) $label = 'Needs Improvement';
+                    else $label = 'Poor';
+                @endphp
+                <p class="text-base font-semibold text-slate-800">
+                    {{ $label }}
+                </p>
+            </div>
+        </div>
+
+        @if($satisfactionStats['top_rated']->isNotEmpty())
+            <h3 class="text-xs font-semibold text-slate-600 mb-2 uppercase">
+                Top-rated accommodations (min 3 reviews)
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr class="text-left text-[11px] font-semibold text-slate-500 uppercase">
+                            <th class="px-2 py-2">Accommodation</th>
+                            <th class="px-2 py-2">Municipality</th>
+                            <th class="px-2 py-2">Avg. Rating</th>
+                            <th class="px-2 py-2">Reviews</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        @foreach($satisfactionStats['top_rated'] as $row)
+                            <tr>
+                                <td class="px-2 py-2">{{ $row['business_name'] }}</td>
+                                <td class="px-2 py-2">{{ $row['municipality'] ?? '-' }}</td>
+                                <td class="px-2 py-2 font-semibold text-amber-500">
+                                    {{ $row['avg_rating'] }} / 5
+                                </td>
+                                <td class="px-2 py-2">{{ $row['review_count'] }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    @else
+        <p class="text-sm text-slate-500">
+            No ratings have been submitted yet.
+        </p>
+    @endif
+</div>
+
+
         {{-- LOCAL VS INTERNATIONAL TOURISTS --}}
 <h2 class="text-xl font-bold mb-4">Tourist Statistics</h2>
 

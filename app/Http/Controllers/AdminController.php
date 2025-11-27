@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\Attraction;
+use App\Models\Review;
 
 class AdminController extends Controller
 {
@@ -459,6 +460,84 @@ class AdminController extends Controller
                 return [$label => $row->count];
             });
 
+
+            // MOST VISITED ATTRACTION (by visits)
+$mostVisitedAttraction = Attraction::orderByDesc('visits')
+    ->select('id', 'name', 'municipality', 'visits')
+    ->first();
+
+// MOST PREFERRED ACCOMMODATION (by booking count)
+$topAccommodationByBookings = Booking::selectRaw('business_id, COUNT(*) as total_bookings')
+    ->whereNotNull('business_id')
+    ->groupBy('business_id')
+    ->orderByDesc('total_bookings')
+    ->with('business') // relies on Booking->business relationship
+    ->first();
+
+// STAY DURATION STATS (longest, shortest, average)
+
+$stayStats = [
+    'longest'  => null,
+    'shortest' => null,
+    'average'  => null,
+];
+
+$stayQuery = Booking::whereNotNull('check_in')
+    ->whereNotNull('check_out')
+    ->whereRaw('DATEDIFF(check_out, check_in) > 0');
+
+if ($stayQuery->count() > 0) {
+    $stayStats['longest'] = $stayQuery
+        ->selectRaw('MAX(DATEDIFF(check_out, check_in)) as longest')
+        ->value('longest');
+
+    $stayStats['shortest'] = $stayQuery
+        ->selectRaw('MIN(DATEDIFF(check_out, check_in)) as shortest')
+        ->value('shortest');
+
+    $stayStats['average'] = round(
+        $stayQuery
+            ->selectRaw('AVG(DATEDIFF(check_out, check_in)) as average')
+            ->value('average'),
+        1
+    );
+}
+
+
+// SATISFACTION / RATINGS STATS
+$satisfactionStats = [
+    'overall_average' => null,
+    'total_reviews'   => 0,
+    'top_rated'       => collect(),
+];
+
+$satisfactionStats['overall_average'] = Review::whereNotNull('rating')->avg('rating');
+$satisfactionStats['total_reviews']   = Review::whereNotNull('rating')->count();
+
+// top 5 accommodations by average rating (min 3 reviews)
+$topRatedBusinesses = Review::whereNotNull('rating')
+    ->selectRaw('business_id, AVG(rating) as avg_rating, COUNT(*) as review_count')
+    ->groupBy('business_id')
+    ->having('review_count', '>=', 3)
+    ->orderByDesc('avg_rating')
+    ->orderByDesc('review_count')
+    ->take(5)
+    ->get();
+
+$businessMap = Business::whereIn('id', $topRatedBusinesses->pluck('business_id'))
+    ->get()
+    ->keyBy('id');
+
+$satisfactionStats['top_rated'] = $topRatedBusinesses->map(function ($row) use ($businessMap) {
+    $biz = $businessMap->get($row->business_id);
+    return [
+        'business_name' => $biz?->name ?? 'Unknown',
+        'municipality'  => $biz?->municipality ?? null,
+        'avg_rating'    => round($row->avg_rating, 2),
+        'review_count'  => $row->review_count,
+    ];
+});
+
         return view('admin.analytics', compact(
             'dailyStats',
             'weeklyStats',
@@ -471,7 +550,11 @@ class AdminController extends Controller
             'bookingsPerMonth',
             'businessesByMunicipality',
             'usersByRole',
-            'bookingsByStatus'
+            'bookingsByStatus',
+            'mostVisitedAttraction',
+            'topAccommodationByBookings',
+            'stayStats',
+            'satisfactionStats'
         ));
     }
 }

@@ -21,6 +21,10 @@ class Announcement extends Model
         'image_path',
     ];
 
+    protected $casts = [
+        'published_at' => 'datetime',
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

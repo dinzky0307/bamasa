@@ -50,8 +50,9 @@ class AttractionController extends Controller
 
     public function show(Attraction $attraction)
     {
-        abort_unless($attraction->status === 'published', 404);
+        // increment visit counter
+    $attraction->increment('visits');
 
-        return view('attractions.show', compact('attraction'));
+    return view('attractions.show', compact('attraction'));
     }
 }
